@@ -40,10 +40,11 @@
 #' @seealso ihw, plot,ihwResult-method
 #' @import methods
 
+#library(CVXR)
 ihwResult <- setClass("ihwResult",
          	      slots = list(
            		     df = "data.frame",
-           		     weights = "matrix",
+           		     weights = "ANY",
            		     alpha = "numeric",
                    nbins = "integer",
                    nfolds = "integer",

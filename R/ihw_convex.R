@@ -77,6 +77,7 @@ ihw.default <- function(pvalues,
                         nfolds = 5L,
                         nfolds_internal = nfolds - 1L,
                         lambdas = "auto",
+                        admm = T,
                         seed = 1L,
                         adjustment_type = "BH",
                         null_proportion = FALSE,
@@ -86,8 +87,6 @@ ihw.default <- function(pvalues,
   # This function essentially wraps the lower level function ihw_internal
   # e.g. takes care of NAs, sorts pvalues and then
   # returns a nice ihw object
-
-
 
   if (!adjustment_type %in% c("BH", "bonferroni")) {
     stop("IHW currently only works with BH or bonferroni types of multiple testing corrections")
@@ -133,6 +132,7 @@ ihw.default <- function(pvalues,
     if (nbins == "auto") {
       nbins <-
         max(1, min(200, floor(length(pvalues) / 700))) # rule of thumb..
+      #print(nbins)
     }
     groups <-
       as.factor(groups_by_filter(covariates, nbins, seed = seed))
@@ -159,7 +159,7 @@ ihw.default <- function(pvalues,
   }
 
   if ((length(lambdas) == 1) & (lambdas[1] == "auto")) {
-    lambdas <- c(Inf, 1.0 / 2 ^ (1:13), 0)
+    lambdas <- c(Inf, 1.0 / 1.2^(1:7), 1/ 2^(2:13), 0)
   }
 
   if (nbins < 1) {
@@ -253,6 +253,7 @@ ihw.default <- function(pvalues,
       quiet = quiet,
       sorted_folds = sorted_folds,
       nfolds = nfolds,
+      admm = admm,
       nfolds_internal = nfolds_internal,
       seed = NULL,
       adjustment_type = adjustment_type,
@@ -268,22 +269,22 @@ ihw.default <- function(pvalues,
 
   # resort back to original form
   weights <-
-    fill_nas_reorder(res$sorted_weights, nna, reorder_pvalues)
+    IHW:::fill_nas_reorder(res$sorted_weights, nna, reorder_pvalues)
   pvalues <-
-    fill_nas_reorder(res$sorted_pvalues, nna, reorder_pvalues)
+    IHW:::fill_nas_reorder(res$sorted_pvalues, nna, reorder_pvalues)
   weighted_pvalues <-
-    fill_nas_reorder(res$sorted_weighted_pvalues, nna, reorder_pvalues)
+    IHW:::fill_nas_reorder(res$sorted_weighted_pvalues, nna, reorder_pvalues)
   adj_pvalues <-
-    fill_nas_reorder(res$sorted_adj_p, nna, reorder_pvalues)
+    IHW:::fill_nas_reorder(res$sorted_adj_p, nna, reorder_pvalues)
   groups     <-
-    factor(fill_nas_reorder(res$sorted_groups, nna, reorder_pvalues),
+    factor(IHW:::fill_nas_reorder(res$sorted_groups, nna, reorder_pvalues),
            levels = group_levels)
   fold_levels <- levels(res$sorted_folds)
   folds      <-
-    factor(fill_nas_reorder(res$sorted_folds, nna, reorder_pvalues),
+    factor(IHW:::fill_nas_reorder(res$sorted_folds, nna, reorder_pvalues),
            levels = fold_levels)
   covariates <-
-    fill_nas_reorder(covariates, nna, 1:length(covariates))
+    IHW:::fill_nas_reorder(covariates, nna, 1:length(covariates))
 
 
   df <- data.frame(
@@ -329,6 +330,7 @@ ihw_internal <-
            quiet = TRUE,
            sorted_folds = NULL,
            nfolds = 10L,
+           admm = T,
            nfolds_internal = nfolds,
            adjustment_type = "BH",
            null_proportion = FALSE,
@@ -357,6 +359,7 @@ ihw_internal <-
       sorted_folds <-
         factor(sample(1:nfolds, m, replace = TRUE), levels = 1:nfolds)
     }
+    #print(length(sorted_folds))
 
     sorted_weights <- rep(NA, m)
     fold_lambdas <- rep(NA, nfolds)
@@ -376,6 +379,7 @@ ihw_internal <-
 
         m_groups_holdout_fold <- m_groups
         m_groups_other_folds <- m_groups
+        m_groups_other_folds_uncollapsed <- m_groups_other_folds
       } else {
         fold_i = levels(sorted_folds)[i]
         filtered_sorted_groups <- sorted_groups[sorted_folds != fold_i]
@@ -397,6 +401,7 @@ ihw_internal <-
             rowSums(m_groups_other_folds_uncollapsed)
         }
       }
+
       ws_mat_list[[i]] <-
         ihw_convex_weights(
           filtered_split_sorted_pvalues,
@@ -404,13 +409,14 @@ ihw_internal <-
           m_groups_holdout_fold,
           m_groups_other_folds,
           lambdas,
+          admm,
           penalty = penalty,
           adjustment_type = adjustment_type,
           quiet = quiet,
           ...
         )
 
-      if (!return_num_rejection_list && length(lambdas) > 1) {
+      if (!return_num_rejection_list && length(lambdas) > 1 && nfolds > 1) {
         nsplits_internal <- 1L
         rjs_mat  <- matrix(NA, nrow = n_lambdas, ncol = nsplits_internal)
         for (s in seq_len(nsplits_internal)) {
@@ -431,6 +437,7 @@ ihw_internal <-
               quiet = quiet,
               sorted_folds = sorted_folds_internal,
               nfolds = nfolds_internal,
+              admm = admm,
               adjustment_type = adjustment_type,
               ...
             )
@@ -439,6 +446,28 @@ ihw_internal <-
         rjs_mat_list[[i]] <- rjs_mat
       }
     }
+    
+    if (nfolds == 1){
+      rjs <- rep(NA, n_lambdas)
+      for (l in seq_len(n_lambdas)) {
+        for (i in seq_along(levels(sorted_folds))) {
+          fold_i = levels(sorted_folds)[i]
+          sorted_weights[sorted_folds == fold_i] <-
+            ws_mat_list[[i]][sorted_groups[sorted_folds == fold_i], l]
+        }
+        sorted_weighted_pvalues <-
+          IHW:::mydiv(sorted_pvalues, sorted_weights)
+        sorted_adj_p <-
+          p.adjust(sorted_weighted_pvalues,
+                   method = adjustment_type,
+                   n = sum(m_groups))
+        rjs[l]   <- sum(sorted_adj_p <= alpha)
+      }
+      rjs <- matrix(rjs, ncol = 1)
+      rjs_mat_list[[1]] <- rjs
+    }
+    #print(rjs_mat_list)
+    
     # within each fold do iterations to also find lambda
     if (return_num_rejection_list) {
       rjs <- rep(NA, n_lambdas)
@@ -449,7 +478,7 @@ ihw_internal <-
             ws_mat_list[[i]][sorted_groups[sorted_folds == fold_i], l]
         }
         sorted_weighted_pvalues <-
-          mydiv(sorted_pvalues, sorted_weights)
+          IHW:::mydiv(sorted_pvalues, sorted_weights)
         sorted_adj_p <-
           p.adjust(sorted_weighted_pvalues,
                    method = adjustment_type,
@@ -473,7 +502,7 @@ ihw_internal <-
         fold_lambdas[i] <- lambdas[lambda_idx]
       }
       sorted_weighted_pvalues <-
-        mydiv(sorted_pvalues, sorted_weights)
+        IHW:::mydiv(sorted_pvalues, sorted_weights)
       sorted_adj_p <-
         p.adjust(sorted_weighted_pvalues,
                  method = adjustment_type,
@@ -495,22 +524,6 @@ ihw_internal <-
       return(lst)
     }
 
-
-    #	lambda_idx <- which.max(apply(rjs,1, mean))
-    # fold_lambdas[i] <- lambda
-
-
-
-    #if (null_proportion){
-    #	pi0_est <- weighted_storey_pi0(sorted_pvalues[sorted_folds==i],
-    #		                  sorted_weights[sorted_folds == i],
-    #		                  tau= null_proportion_level,
-    #		                  m=sum(m_groups_holdout_fold))
-
-    #	sorted_weights[sorted_folds == i] <- sorted_weights[sorted_folds == i]/pi0_est
-    #	weight_matrix[,i] <- weight_matrix[,i]/pi0_est
-
-    #}
   }
 
 
@@ -600,6 +613,7 @@ ihw_convex_weights <-
            m_groups_grenander,
            penalty = "total variation",
            lambdas,
+           admm = T,
            adjustment_type = "BH",
            grenander_binsize = 1,
            quiet = quiet) {
@@ -643,6 +657,7 @@ ihw_convex_weights <-
     #lapply grenander...
     if (!quiet)
       message("Applying Grenander estimator within each bin.")
+
     grenander_list <- mapply(
       presorted_grenander,
       split_sorted_pvalues,
@@ -660,7 +675,12 @@ ihw_convex_weights <-
         ts <- matrix(ts, ncol = 1)
       }
     } else {
-      ts <-  optimal_ts(grenander_list, m_groups, alpha, lambdas_filt)
+        if (admm){
+          ts <-  IHW:::optimal_ts(grenander_list, m_groups, alpha, lambdas_filt)
+        }else{
+          #add function cvxr here
+          ts <- optimal_cvxr(grenander_list, m_groups, alpha, lambdas_filt)
+        }
 
       if (!zero_included) {
         ts <- ts[,-ncol(ts), drop = FALSE]
@@ -672,7 +692,7 @@ ihw_convex_weights <-
     }
 
     ws <- apply(ts, 2, function(x)
-      thresholds_to_weights(x, m_groups))
+      IHW:::thresholds_to_weights(x, m_groups))
 
     # return matrix as follows: nbins x nlambdas)
     return(ws)
@@ -714,3 +734,104 @@ presorted_grenander <-
       message(paste("Grenander fit with", length(ll$slope.knots), "knots."))
     gren
   }
+
+
+#function that calculates rejection threshold ts via CVXR
+optimal_cvxr <- function(train_gre, m_groups, alpha, lambdas){
+  
+  requireNamespace("CVXR")
+  requireNamespace("gurobi")
+  
+  #function that calculates F_g = b_j^g*t
+  calculate_F_g <- function(group){
+    #get the slopes in group g: F_g = min b_j*t
+    return(train_gre[[group]][["Fs"]][-1])
+  }
+  
+  calculate_f_g <- function(group){
+    #get the slopes in group g: f_g = min b_j^g
+    if(length(train_gre[[group]][["fs"]]) < 2){
+      return(train_gre[[group]][["fs"]])
+    }else{
+      return(train_gre[[group]][["fs"]])
+    }
+  }
+  
+  calculate_locs <- function(group){
+    return(train_gre[[group]][["locs"]][-1])
+  }
+  
+  #get lambdas
+  mu_t <- IHW:::single_t_FDR(train_gre, m_groups, alpha)
+  max_lambdas <- IHW:::lambdaMax(train_gre, m_groups, alpha, mu_t[["mu_dual"]], mu_t[["t"]])
+  lambdas <- lambdas*max_lambdas
+  lambdas <- c(1e10, lambdas, 0)
+  
+  #G is the number of groups
+  G <- length(train_gre)
+  #K is the number of lambdas
+  K <- length(lambdas)
+  
+  #rejection threshold for each group, in total 47 groups
+  ts <- CVXR::Variable(G)
+  F_bar <- CVXR::Variable(G)
+  
+  #m is the total number of hypothesis testings
+  m <-sum(m_groups)
+  
+  #q_g is the ratio of m_g/m
+  q_g <- as.numeric(m_groups/m)
+  
+  
+  F_g_list <- sapply(c(1:G), calculate_F_g)
+  f_g_list <- sapply(c(1:G), calculate_f_g)
+  locs_list <- sapply(c(1:G), calculate_locs)
+  
+  
+  #obtain a_j from F_g - b_j^g*t
+  a_j <- list()
+  
+  for(i in 1:G){
+    temp <- F_g_list[[i]] - locs_list[[i]]*f_g_list[[i]]
+    a_j[[i]] <- temp
+  }
+  
+  #construct G lists of constraints on F_bar
+  F_bar_constraints <- list()
+  for(i in 1:G){
+    temp <- a_j[[i]] + f_g_list[[i]]*ts[i] 
+    F_bar_constraints [[i]] <- F_bar[i] <= temp
+  }
+  
+  # Create an empty data frame
+  results <- matrix(nrow = G, ncol = K)
+  
+  #Now we test the regularization case when lambda != 0.
+  #iterate through each lambda
+  for(i in 1: length(lambdas)){
+    lambda <- lambdas[i]
+    
+    #construct the objective function
+    objective <- CVXR::Maximize( sum(q_g*F_bar) - lambda*sum(abs(diff(ts))))
+    constraints <- list(ts >= 0, ts <= 1, sum(q_g*(ts - alpha*F_bar)) <= 0, F_bar >= 0)
+    constraints <- c(constraints, F_bar_constraints)
+    
+    #obtain the solution of the no regularization case
+    solution <- CVXR::solve(CVXR::Problem(objective, constraints), solver="GUROBI",
+                      verbose=TRUE)
+    
+    solution$status
+    solution$value
+    results <- cbind(results, solution$getValue(ts))
+  }
+  results <- results
+  
+  return(results[, c((K+1):(2*K))])
+}
+
+find_lambda_max <- function(grenander_list, m_groups, alpha, t_0){
+  t_inf <- IHW:::Rcpp_classicTautString_TV1(t_0, 1e10)
+  density <- IHW:::GrenMix_pdf(grenander_list, m_groups, t_inf[1])
+  mu_dual <- density / (1 - alpha * density)
+  return(c(t_inf, IHW:::lambdaMax(grenander_list, m_groups, alpha, mu_dual, t_inf[1])))
+}

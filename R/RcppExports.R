@@ -41,6 +41,10 @@ unregularized_thresholds_bh <- function(train_grenander, test_ms, alpha) {
     .Call(`_IHW_unregularized_thresholds_bh`, train_grenander, test_ms, alpha)
 }
 
+unregularized_thresholds_bh_lambda <- function(train_grenander, test_ms, alpha) {
+    .Call(`_IHW_unregularized_thresholds_bh_lambda`, train_grenander, test_ms, alpha)
+}
+
 InvertSubgradientTilted <- function(grenander, mu, rho, b, alpha) {
     .Call(`_IHW_InvertSubgradientTilted`, grenander, mu, rho, b, alpha)
 }

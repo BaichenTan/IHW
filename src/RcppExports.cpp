@@ -126,6 +126,19 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// unregularized_thresholds_bh_lambda
+double unregularized_thresholds_bh_lambda(List train_grenander, NumericVector test_ms, double alpha);
+RcppExport SEXP _IHW_unregularized_thresholds_bh_lambda(SEXP train_grenanderSEXP, SEXP test_msSEXP, SEXP alphaSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< List >::type train_grenander(train_grenanderSEXP);
+    Rcpp::traits::input_parameter< NumericVector >::type test_ms(test_msSEXP);
+    Rcpp::traits::input_parameter< double >::type alpha(alphaSEXP);
+    rcpp_result_gen = Rcpp::wrap(unregularized_thresholds_bh_lambda(train_grenander, test_ms, alpha));
+    return rcpp_result_gen;
+END_RCPP
+}
 // InvertSubgradientTilted
 double InvertSubgradientTilted(List grenander, double mu, double rho, double b, double alpha);
 RcppExport SEXP _IHW_InvertSubgradientTilted(SEXP grenanderSEXP, SEXP muSEXP, SEXP rhoSEXP, SEXP bSEXP, SEXP alphaSEXP) {
@@ -181,6 +194,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_IHW_GrenMix_cdf", (DL_FUNC) &_IHW_GrenMix_cdf, 3},
     {"_IHW_GrenMix_lagrange_balance", (DL_FUNC) &_IHW_GrenMix_lagrange_balance, 5},
     {"_IHW_unregularized_thresholds_bh", (DL_FUNC) &_IHW_unregularized_thresholds_bh, 3},
+    {"_IHW_unregularized_thresholds_bh_lambda", (DL_FUNC) &_IHW_unregularized_thresholds_bh_lambda, 3},
     {"_IHW_InvertSubgradientTilted", (DL_FUNC) &_IHW_InvertSubgradientTilted, 5},
     {"_IHW_lambdaMax", (DL_FUNC) &_IHW_lambdaMax, 5},
     {"_IHW_optimal_ts", (DL_FUNC) &_IHW_optimal_ts, 4},
