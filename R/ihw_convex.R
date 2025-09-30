@@ -1,7 +1,7 @@
 #' @export
-ihw <- function(...)
+ihwOld <- function(...)
 {
-    UseMethod( "ihw" )
+    UseMethod( "ihwOld" )
 }
 
 
@@ -50,7 +50,7 @@ ihw <- function(...)
 #' @param ... Arguments passed to internal functions.
 #'
 #' @return A ihwResult object.
-#' @seealso ihwResult, plot,ihwResult-method, ihw.DESeqResults
+#' @seealso ihwResult,  ihwOld.DESeqResults
 #'
 #' @examples
 #'
@@ -61,18 +61,18 @@ ihw <- function(...)
 #' .Random.seed <- save.seed
 #' pvalue <- 1-pnorm(Z)                  # pvalue
 #'
-#' ihw_fdr <- ihw(pvalue, X, .1)        # Standard IHWold for FDR control
-#' ihw_fwer <- ihw(pvalue, X, .1, adjustment_type = "bonferroni")    # FWER control
+#' ihw_fdr <- ihwOld(pvalue, X, .1)        # Standard IHWold for FDR control
+#' ihw_fwer <- ihwOld(pvalue, X, .1, adjustment_type = "bonferroni")    # FWER control
 #
 #' table(H[adj_pvalues(ihw_fdr) <= 0.1] == 0) #how many false rejections?
 #' table(H[adj_pvalues(ihw_fwer) <= 0.1] == 0)
 #'
 #'
 #' @export
-#' @aliases ihw
+#' @aliases ihwOld
 #'
 
-ihw.default <- function(pvalues, covariates, alpha,
+ihwOld.default <- function(pvalues, covariates, alpha,
 						covariate_type = "ordinal",
 						nbins = "auto",
 						m_groups = NULL,
@@ -91,7 +91,7 @@ ihw.default <- function(pvalues, covariates, alpha,
 						return_internal = FALSE,
 						...){
 
-	# This function essentially wraps the lower level function ihw_internal
+	# This function essentially wraps the lower level function ihwOld_internal
 	# e.g. takes care of NAs, sorts pvalues and then
 	# returns a nice ihw object
 
@@ -141,9 +141,8 @@ ihw.default <- function(pvalues, covariates, alpha,
 		if (!is.null(m_groups)){
 			stop("m_groups should only be specified when the covariates are a factor")
 		}
-
 		if (nbins == "auto"){
-			nbins <- max(1,min(40, floor(length(pvalues)/1500))) # rule of thumb..
+			nbins <- max(1, floor(length(pvalues)/1500)) # rule of thumb..
 		}
 		groups <- as.factor(groups_by_filter(covariates, nbins, seed=seed))
 		penalty <- "total variation"
@@ -238,7 +237,7 @@ ihw.default <- function(pvalues, covariates, alpha,
 					sorted_folds=as.factor(rep(1, length(sorted_pvalues))),
 					weight_matrix = matrix(1))
 	} else if (nbins > 1) {
-		res <- ihw_internal(sorted_groups, sorted_pvalues, alpha, lambdas,
+		res <- ihwOld_internal(sorted_groups, sorted_pvalues, alpha, lambdas,
 						m_groups,
 						penalty = penalty,
 						quiet = quiet,
@@ -296,7 +295,7 @@ ihw.default <- function(pvalues, covariates, alpha,
 }
 
 # operate on pvalues which have already been sorted and without any NAs
-ihw_internal <- function(sorted_groups, sorted_pvalues, alpha, lambdas,
+ihwOld_internal <- function(sorted_groups, sorted_pvalues, alpha, lambdas,
 								m_groups,
 							    penalty="total variation",
 							    seed=NULL,
@@ -367,14 +366,14 @@ ihw_internal <- function(sorted_groups, sorted_pvalues, alpha, lambdas,
 		}
 		# within each fold do iterations to also find lambda
 
-		# TODO replace for loop by single call to ihw_convex with warm starts
+		# TODO replace for loop by single call to ihwOld_convex with warm starts
 		if (length(lambdas) > 1){
 			rjs  <- matrix(NA, nrow=length(lambdas), ncol=nsplits_internal)
 			for (k in 1:length(lambdas)){
 				lambda <- lambdas[k]
 				for (l in 1:nsplits_internal){
 
-					rjs[k,l] <- ihw_internal(filtered_sorted_groups, filtered_sorted_pvalues, alpha,
+					rjs[k,l] <- ihwOld_internal(filtered_sorted_groups, filtered_sorted_pvalues, alpha,
 											lambda, m_groups_other_folds,
 									    	seed=NULL, quiet=quiet,
 									    	nfolds=nfolds_internal,
@@ -397,12 +396,12 @@ ihw_internal <- function(sorted_groups, sorted_pvalues, alpha, lambdas,
 		# ok we have finally picked lambda and can proceed
 
 		if (distrib_estimator=="grenander"){
-			res <- ihw_convex(filtered_split_sorted_pvalues, alpha,
+			res <- ihwOld_convex(filtered_split_sorted_pvalues, alpha,
 						   m_groups_holdout_fold, m_groups_other_folds,
 						   penalty=penalty, lambda=lambda, lp_solver=lp_solver, 
 						   adjustment_type=adjustment_type, quiet=quiet,...)
 		} else if (distrib_estimator == "ECDF"){
-			res <- ihw_milp(filtered_split_sorted_pvalues, alpha, m_groups_holdout_fold,
+			res <- ihwOld_milp(filtered_split_sorted_pvalues, alpha, m_groups_holdout_fold,
 				           penalty=penalty, lambda=lambda, lp_solver=lp_solver, ...)
 		} else {
 			stop("This type of distribution estimator is not available.")
@@ -446,7 +445,7 @@ ihw_internal <- function(sorted_groups, sorted_pvalues, alpha, lambdas,
 #' @param formula \code{\link{formula}}, specified in the form pvalue~covariate (only 1D covariate supported)
 #' @param data data.frame from which the variables in formula should be taken
 #' @export
-ihw.formula <- function(formula, data=parent.frame(), ...){
+ihwOld.formula <- function(formula, data=parent.frame(), ...){
 	if (length(formula) != 3){
 		stop("expecting formula of the form pvalue~covariate")
 	}
@@ -454,11 +453,11 @@ ihw.formula <- function(formula, data=parent.frame(), ...){
 	cov_name <- formula[[3]]
 	pvalues <- eval(pv_name, data, parent.frame())
 	covariates <- eval(cov_name, data, parent.frame())
-	ihw(pvalues, covariates, ...)
+	ihwOld(pvalues, covariates, ...)
 }
 
 
-#' ihw.DESeqResults: IHWold method dispatching on DESeqResults objects
+#' ihwOld.DESeqResults: IHWold method dispatching on DESeqResults objects
 #'
 #' @param deseq_res "DESeqResults" object
 #' @param filter Vector of length equal to number of rows of deseq_res object. This is used
@@ -469,7 +468,7 @@ ihw.formula <- function(formula, data=parent.frame(), ...){
 #' @param ... Other optional keyword arguments passed to ihw.
 #'
 #' @return A "DESeqResults" object, which includes weights and adjusted p-values returned
-#'         	by IHWold. In addition, includes a metadata slot with an "ihwResult" object.
+#'         	by IHWold. In addition, includes a metadata slot with an "ihwOld_internalResult" object.
 #' @seealso ihw, ihwResult
 #'
 #' @examples \dontrun{
@@ -479,13 +478,13 @@ ihw.formula <- function(formula, data=parent.frame(), ...){
 #'    dds <- DESeqDataSet(se = airway, design = ~ cell + dex)
 #'    dds <- DESeq(dds)
 #'    deseq_res <- results(dds)
-#'    deseq_res <- ihw(deseq_res, alpha=0.1)
+#'    deseq_res <- ihwOlddeseq_res, alpha=0.1)
 #'    #equivalent: deseq_res2 <- results(dds, filterFun = ihw)
 #' }
 #'
 #' @export
 #'
-ihw.DESeqResults <- function(deseq_res, filter="baseMean",
+ihwOld.DESeqResults <- function(deseq_res, filter="baseMean",
 								alpha=0.1, adjustment_type="BH",...){
 
     if (missing(filter)) {
@@ -497,7 +496,7 @@ ihw.DESeqResults <- function(deseq_res, filter="baseMean",
 
   	stopifnot(length(filter) == nrow(deseq_res))
 
-	ihw_res <- ihw(deseq_res$pvalue, filter, alpha=alpha,
+	ihw_res <- ihwOld(deseq_res$pvalue, filter, alpha=alpha,
 							adjustment_type=adjustment_type,...)
 
 	deseq_res$padj <- adj_pvalues(ihw_res)
@@ -516,7 +515,7 @@ ihw.DESeqResults <- function(deseq_res, filter="baseMean",
 
 #' @importFrom slam simple_triplet_zero_matrix simple_triplet_matrix
 #' @importFrom lpsymphony lpsymphony_solve_LP
-ihw_convex <- function(split_sorted_pvalues, alpha, m_groups, m_groups_grenander,
+ihwOld_convex <- function(split_sorted_pvalues, alpha, m_groups, m_groups_grenander,
 		penalty="total variation", lambda=Inf, lp_solver="gurobi",
 		adjustment_type= "BH", grenander_binsize = 1, quiet=quiet){
 
@@ -736,7 +735,7 @@ presorted_grenander <- function(sorted_pvalues, m_total=length(sorted_pvalues),
 # needed for reproducibility of manuscript
 # to demonstrate that "naive IHWold" algorithm does not control type-I error
 
-ihw_milp <- function(split_sorted_pvalues, alpha, m_groups, lambda=Inf, lp_solver="gurobi", 
+ihwOld_milp <- function(split_sorted_pvalues, alpha, m_groups, lambda=Inf, lp_solver="gurobi", 
 		quiet=quiet,
 		optim_pval_threshold=1,
 		penalty="total variation",
@@ -992,7 +991,6 @@ ihw_milp <- function(split_sorted_pvalues, alpha, m_groups, lambda=Inf, lp_solve
 			node_limit = node_limit, gap_limit = ifelse(mip_gap <= 10^(-4), -1, mip_gap*100), #now default mip_gap=10^(-4) as in Gurobi while -1 default for Rsymphony
 			first_feasible = FALSE)
 		sol <- res$solution
-		print(str(res))
 		solver_status <- res$status
 
 	} else if (lp_solver=="gurobi"){

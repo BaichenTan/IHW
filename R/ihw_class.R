@@ -13,13 +13,13 @@
 #' @slot reg_path_information  A data.frame, information about the whole regularization path. (Currently not used, thus empty)
 #' @slot solver_information  A list, solver specific output, e.g. were all subproblems solved to optimality? (Currently empty list)
 #'
-#' @return The different methods applied to an ihwResult object can return the following:
+#' @return The different methods applied to an ihw_oldResult object can return the following:
 #' @return 1) A vector
 #'     of length equal to the number of hypotheses tested (e.g. the adjusted p-value or the weight
 #'     of each hypothesis).
 #' @return 2) A matrix of dimension equal to nfolds x nbins (e.g. the weight of
 #'     each stratum, fold combination, set by specifying levels_only=TRUE).
-#' @return 3) A vector of length 1 (usually a parameter of the ihwResult object such as nfolds or
+#' @return 3) A vector of length 1 (usually a parameter of the ihw_oldResult object such as nfolds or
 #'     the total number of rejections).
 #' @return 4) A data.frame (as.data.frame) or just console output (show) for the extended Base generics.
 #' @return See section below for the individual methods.
@@ -37,10 +37,10 @@
 #' rejections(ihw_res)
 #' colnames(as.data.frame(ihw_res))
 #'
-#' @seealso ihw, plot,ihwResult-method
+#' @seealso ihw
 #' @import methods
 
-ihwResult <- setClass("ihwResult",
+ihw_oldResult <- setClass("ihw_oldResult",
          	      slots = list(
            		     df = "data.frame",
            		     weights = "matrix",
@@ -56,22 +56,22 @@ ihwResult <- setClass("ihwResult",
            		     solver_information= "list"))
 
 #-----------------------------adjusted p-values extraction---------------------------------------------------------#
-adj_pvalues_ihwResult <- function(object){
+adj_pvalues_ihw_oldResult <- function(object){
   object@df$adj_pvalue
 }
 
-#' @rdname ihwResult-class
+#' @rdname ihw_oldResult-class
 setGeneric("adj_pvalues", function(object) standardGeneric("adj_pvalues"))
 
-#' @describeIn ihwResult Extract adjusted pvalues
+#' @describeIn ihw_oldResult Extract adjusted pvalues
 #' @export
-setMethod("adj_pvalues", signature(object="ihwResult"),
-          adj_pvalues_ihwResult)
+setMethod("adj_pvalues", signature(object="ihw_oldResult"),
+          adj_pvalues_ihw_oldResult)
 
 #--------------------------- weights extraction --------------------------------------------------------------------#
 
 
-weights_ihwResult <-function(object, levels_only = FALSE){
+weights_ihw_oldResult <-function(object, levels_only = FALSE){
   if (levels_only) {
     object@weights
   } else {
@@ -79,224 +79,224 @@ weights_ihwResult <-function(object, levels_only = FALSE){
   }
 }
 
-#' @param object,x A ihwResult object as returned by a call to ihw(...)
+#' @param object,x A ihw_oldResult object as returned by a call to ihw(...)
 #' @param levels_only Logical, if FALSE, return a vector of weights (thresholds) with one weight
 #'    (threshold) for each hypothesis, otherwise return a nfolds x nbins matrix of weights (thresholds)
 #' @param row.names,optional See ?base::as.data.frame for a description of these arguments.
 #' @param ... Parameters passed in to individual methods
-#' @describeIn ihwResult Extract weights
+#' @describeIn ihw_oldResult Extract weights
 #' @export
-setMethod("weights", signature(object="ihwResult"),
-          weights_ihwResult)
+setMethod("weights", signature(object="ihw_oldResult"),
+          weights_ihw_oldResult)
 
 
 #--------------------------- threshold extraction -------------------------------------------------------------------#
 
 
-thresholds_ihwResult <-function(object, levels_only = FALSE){
+thresholds_ihw_oldResult <-function(object, levels_only = FALSE){
   t <- get_bh_threshold(na.exclude(weighted_pvalues(object)), alpha(object),
                         mtests = sum(as.numeric(m_groups(object))))
   t*weights(object, levels_only = levels_only)
 }
 
-#' @rdname ihwResult-class
+#' @rdname ihw_oldResult-class
 setGeneric("thresholds", function(object,...) standardGeneric("thresholds"))
 
-#' @describeIn ihwResult Calculate ihw thresholds
+#' @describeIn ihw_oldResult Calculate ihw thresholds
 #' @export
-setMethod("thresholds", signature(object="ihwResult"),
-          thresholds_ihwResult)
+setMethod("thresholds", signature(object="ihw_oldResult"),
+          thresholds_ihw_oldResult)
 
 
 
 #--------------------------- p-value extraction ---------------------------------------------------------------------#
 
-pvalues_ihwResult <- function(object){
+pvalues_ihw_oldResult <- function(object){
   object@df$pvalue
 }
 
-#' @rdname ihwResult-class
+#' @rdname ihw_oldResult-class
 setGeneric("pvalues", function(object) standardGeneric("pvalues"))
 
-#' @describeIn ihwResult Extract pvalues
+#' @describeIn ihw_oldResult Extract pvalues
 #' @export
-setMethod("pvalues", signature(object="ihwResult"),
-          pvalues_ihwResult)
+setMethod("pvalues", signature(object="ihw_oldResult"),
+          pvalues_ihw_oldResult)
 
 
 #--------------------------- weighted p-value extraction -------------------------------------------------------------#
 
-weighted_pvalues_ihwResult <- function(object){
+weighted_pvalues_ihw_oldResult <- function(object){
   object@df$weighted_pvalue
 }
 
-#' @rdname ihwResult-class
+#' @rdname ihw_oldResult-class
 setGeneric("weighted_pvalues", function(object) standardGeneric("weighted_pvalues"))
 
-#' @describeIn ihwResult Extract weighted pvalues
+#' @describeIn ihw_oldResult Extract weighted pvalues
 #' @export
-setMethod("weighted_pvalues", signature(object="ihwResult"),
-          weighted_pvalues_ihwResult)
+setMethod("weighted_pvalues", signature(object="ihw_oldResult"),
+          weighted_pvalues_ihw_oldResult)
 
 
 #---------------------------  covariate extraction ----------------------------------------------------------#
 
-covariates_ihwResult <- function(object){
+covariates_ihw_oldResult <- function(object){
   object@df$covariate
 }
 
-#' @rdname ihwResult-class
+#' @rdname ihw_oldResult-class
 setGeneric("covariates", function(object) standardGeneric("covariates"))
 
-#' @describeIn ihwResult Extract covariates
+#' @describeIn ihw_oldResult Extract covariates
 #' @export
-setMethod("covariates", signature(object="ihwResult"),
-          covariates_ihwResult)
+setMethod("covariates", signature(object="ihw_oldResult"),
+          covariates_ihw_oldResult)
 
 #---------------------------- covariate type -----------------------------------------------------------------#
-covariate_type_ihwResult <- function(object){
+covariate_type_ihw_oldResult <- function(object){
   object@covariate_type
 }
 
-#' @rdname ihwResult-class
+#' @rdname ihw_oldResult-class
 setGeneric("covariate_type", function(object) standardGeneric("covariate_type"))
 
-#' @describeIn ihwResult Extract type of covariate ("ordinal" or "nominal")
+#' @describeIn ihw_oldResult Extract type of covariate ("ordinal" or "nominal")
 #' @export
-setMethod("covariate_type", signature(object="ihwResult"),
-          covariate_type_ihwResult)
+setMethod("covariate_type", signature(object="ihw_oldResult"),
+          covariate_type_ihw_oldResult)
 
 #----------------- extract stratification variable------------------------------------------------------------#
-groups_factor_ihwResult <- function(object){
+groups_factor_ihw_oldResult <- function(object){
 	object@df$group
 }
 
-#' @rdname ihwResult-class
+#' @rdname ihw_oldResult-class
 setGeneric("groups_factor", function(object) standardGeneric("groups_factor"))
 
 
-#' @describeIn ihwResult Extract factor of stratification (grouping) variable
+#' @describeIn ihw_oldResult Extract factor of stratification (grouping) variable
 #' @export
-setMethod("groups_factor", signature(object="ihwResult"),
-          groups_factor_ihwResult)
+setMethod("groups_factor", signature(object="ihw_oldResult"),
+          groups_factor_ihw_oldResult)
 
 #----------------- nfolds extraction ----------------------------------------------------------------------#
-nfolds_ihwResult <- function(object) object@nfolds
+nfolds_ihw_oldResult <- function(object) object@nfolds
 
-#' @rdname ihwResult-class
+#' @rdname ihw_oldResult-class
 setGeneric("nfolds", function(object) standardGeneric("nfolds"))
 
-#' @describeIn ihwResult Extract number of folds
+#' @describeIn ihw_oldResult Extract number of folds
 #' @export
-setMethod("nfolds", signature(object="ihwResult"),
-          nfolds_ihwResult)
+setMethod("nfolds", signature(object="ihw_oldResult"),
+          nfolds_ihw_oldResult)
 
 
 #----------------- nbins extraction ----------------------------------------------------------------------#
-nbins_ihwResult <- function(object) object@nbins
+nbins_ihw_oldResult <- function(object) object@nbins
 
-#' @rdname ihwResult-class
+#' @rdname ihw_oldResult-class
 setGeneric("nbins", function(object) standardGeneric("nbins"))
 
-#' @describeIn ihwResult Extract number of bins
+#' @describeIn ihw_oldResult Extract number of bins
 #' @export
-setMethod("nbins", signature(object="ihwResult"),
-          nbins_ihwResult)
+setMethod("nbins", signature(object="ihw_oldResult"),
+          nbins_ihw_oldResult)
 
 
 #----------------- nominal alpha extraction ----------------------------------------------------------------------#
-alpha_ihwResult <-function(object) object@alpha
+alpha_ihw_oldResult <-function(object) object@alpha
 
-#' @rdname ihwResult-class
+#' @rdname ihw_oldResult-class
 setGeneric("alpha", function(object) standardGeneric("alpha"))
 
-#' @describeIn ihwResult Extract nominal significance (alpha) level
+#' @describeIn ihw_oldResult Extract nominal significance (alpha) level
 #' @export
-setMethod("alpha", signature(object="ihwResult"),
-          alpha_ihwResult)
+setMethod("alpha", signature(object="ihw_oldResult"),
+          alpha_ihw_oldResult)
 
 #----------------- adjustment type extraction ----------------------------------------------------------------------#
-adjustment_type_ihwResult <-function(object) object@adjustment_type
+adjustment_type_ihw_oldResult <-function(object) object@adjustment_type
 
 setGeneric("adjustment_type", function(object) standardGeneric("adjustment_type"))
 
-setMethod("adjustment_type", signature(object="ihwResult"),
-          adjustment_type_ihwResult)
+setMethod("adjustment_type", signature(object="ihw_oldResult"),
+          adjustment_type_ihw_oldResult)
 
 
 #----------------- rejections ------------------------------------------------------------------------------------#
 
 
 # TODO: Extend this to groupwise calculation (i.e. rejections per stratum)
-rejections_ihwResult <- function(object){
+rejections_ihw_oldResult <- function(object){
   sum(rejected_hypotheses(object), na.rm=TRUE)
 }
 
-#' @rdname ihwResult-class
+#' @rdname ihw_oldResult-class
 setGeneric("rejections", function(object,...) standardGeneric("rejections"))
 
-#' @describeIn ihwResult Total number of rejected hypotheses by ihw procedure
+#' @describeIn ihw_oldResult Total number of rejected hypotheses by ihw procedure
 #' @export
-setMethod("rejections", signature(object="ihwResult"),
-          rejections_ihwResult)
+setMethod("rejections", signature(object="ihw_oldResult"),
+          rejections_ihw_oldResult)
 
 
 
-rejected_hypotheses_ihwResult <- function(object){
+rejected_hypotheses_ihw_oldResult <- function(object){
   adj_pvalues(object) <= alpha(object)
 }
 
-#' @rdname ihwResult-class
+#' @rdname ihw_oldResult-class
 setGeneric("rejected_hypotheses", function(object,...) standardGeneric("rejected_hypotheses"))
 
-#' @describeIn ihwResult Get a boolean vector of the rejected hypotheses
+#' @describeIn ihw_oldResult Get a boolean vector of the rejected hypotheses
 #' @export
-setMethod("rejected_hypotheses", signature(object="ihwResult"),
-          rejected_hypotheses_ihwResult)
+setMethod("rejected_hypotheses", signature(object="ihw_oldResult"),
+          rejected_hypotheses_ihw_oldResult)
 
 
 #---------------- regularization terms ---------------------------
-regularization_term_ihwResult <-function(object) object@regularization_term
+regularization_term_ihw_oldResult <-function(object) object@regularization_term
 
-#' @rdname ihwResult-class
+#' @rdname ihw_oldResult-class
 setGeneric("regularization_term", function(object) standardGeneric("regularization_term"))
 
-#' @describeIn ihwResult Extract vector of regularization parameters used for each stratum
+#' @describeIn ihw_oldResult Extract vector of regularization parameters used for each stratum
 #' @export
-setMethod("regularization_term", signature(object="ihwResult"),
-          regularization_term_ihwResult)
+setMethod("regularization_term", signature(object="ihw_oldResult"),
+          regularization_term_ihw_oldResult)
 
 #---------------- m_groups --------------------------------------------------
-m_groups_ihwResult <-function(object) object@m_groups
+m_groups_ihw_oldResult <-function(object) object@m_groups
 
-#' @rdname ihwResult-class
+#' @rdname ihw_oldResult-class
 setGeneric("m_groups", function(object) standardGeneric("m_groups"))
 
-#' @describeIn ihwResult Extract total number of hypotheses within each stratum
+#' @describeIn ihw_oldResult Extract total number of hypotheses within each stratum
 #' @export
-setMethod("m_groups", signature(object="ihwResult"),
-          m_groups_ihwResult)
+setMethod("m_groups", signature(object="ihw_oldResult"),
+          m_groups_ihw_oldResult)
 
 #--------------- convenience methods ------------------------------------------------------------------------------#
 
-#' @rdname ihwResult-class
-as.data.frame_ihwResult <-function(x,row.names=NULL, optional=FALSE, ...){
+#' @rdname ihw_oldResult-class
+as.data.frame_ihw_oldResult <-function(x,row.names=NULL, optional=FALSE, ...){
         as.data.frame(x@df, row.names=row.names, optional=optional)
       }
 
-#' @describeIn ihwResult Coerce ihwResult to data frame
+#' @describeIn ihw_oldResult Coerce ihw_oldResult to data frame
 #' @importFrom BiocGenerics as.data.frame
 #' @export
-setMethod("as.data.frame", "ihwResult",as.data.frame_ihwResult)
+setMethod("as.data.frame", "ihw_oldResult",as.data.frame_ihw_oldResult)
 
-#' @describeIn ihwResult Return number of p-values
+#' @describeIn ihw_oldResult Return number of p-values
 #' @export
-setMethod("nrow", "ihwResult", function(x) nrow(x@df))
+setMethod("nrow", "ihw_oldResult", function(x) nrow(x@df))
 
-#' @describeIn ihwResult Convenience method to show ihwResult object
+#' @describeIn ihw_oldResult Convenience method to show ihw_oldResult object
 #' @importFrom methods show
 #' @export
-setMethod("show", signature(object="ihwResult"), function(object) {
+setMethod("show", signature(object="ihw_oldResult"), function(object) {
   adj_type <- adjustment_type(object)
   if (adj_type == "BH"){
     typeI_error <- "FDR"
@@ -305,7 +305,7 @@ setMethod("show", signature(object="ihwResult"), function(object) {
   } else {
     stop("Adjustment method appears to be invalid, corrupted IHWold object.")
   }
-  cat("ihwResult object with", nrow(object),"hypothesis tests \n")
+  cat("ihw_oldResult object with", nrow(object),"hypothesis tests \n")
   cat("Nominal",  typeI_error, "control level:", alpha(object),"\n")
   cat("Split into", nbins(object),"bins, based on an", covariate_type(object), "covariate\n")
 })
@@ -315,7 +315,7 @@ setMethod("show", signature(object="ihwResult"), function(object) {
 #------------------ not exported stuff ----------------------------------------------------------------------------#
 
 ##### FDR estimate #############################################################
-plugin_fdr.ihwResult <- function(object) {
+plugin_fdr.ihw_oldResult <- function(object) {
   ts <- thresholds(object)
   m_groups <- table(groups_factor(object))
   sum(ts*m_groups)/rejections(object, method="thresholds")
@@ -324,12 +324,12 @@ plugin_fdr.ihwResult <- function(object) {
 setGeneric("plugin_fdr", function(object,...) standardGeneric("plugin_fdr"))
 
 
-setMethod("plugin_fdr", signature(object="ihwResult"),
-          plugin_fdr.ihwResult)
+setMethod("plugin_fdr", signature(object="ihw_oldResult"),
+          plugin_fdr.ihw_oldResult)
 
 
 ##### #############################################################
-stratification_breaks.ihwResult <- function(object) {
+stratification_breaks.ihw_oldResult <- function(object) {
   ts <- thresholds(object)
   groups <- groups_factor(object)
   filterstat_list <- split(covariates(object), groups)
@@ -340,15 +340,15 @@ stratification_breaks.ihwResult <- function(object) {
 setGeneric("stratification_breaks", function(object,...) standardGeneric("stratification_breaks"))
 
 
-setMethod("stratification_breaks", signature(object="ihwResult"),
-          stratification_breaks.ihwResult)
+setMethod("stratification_breaks", signature(object="ihw_oldResult"),
+          stratification_breaks.ihw_oldResult)
 
 
 ######## temporary: number of pvals in each stratum #############################
 stratum_sizes <- function(object) table(groups_factor(object))
 
 ############# validity ##########################################################
-setValidity( "ihwResult", function( object ) {
+setValidity( "ihw_oldResult", function( object ) {
 	return(TRUE)
 } )
 
